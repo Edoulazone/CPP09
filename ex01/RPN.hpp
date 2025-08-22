@@ -6,7 +6,7 @@
 /*   By: eschmitz <eschmitz@student.s19.be>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/15 17:22:01 by eschmitz          #+#    #+#             */
-/*   Updated: 2025/05/15 17:25:23 by eschmitz         ###   ########.fr       */
+/*   Updated: 2025/08/22 15:14:30 by eschmitz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ class RPNException : public std::exception {
 };
 
 class RPN {
-private:
+	private:
 		std::stack<int> _stack;  // Stack to hold operands during calculation
 
 		// Helper method to check if a character is an operator
