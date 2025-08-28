@@ -6,7 +6,7 @@
 /*   By: eschmitz <eschmitz@student.s19.be>         +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/15 17:36:48 by eschmitz          #+#    #+#             */
-/*   Updated: 2025/08/22 15:57:42 by eschmitz         ###   ########.fr       */
+/*   Updated: 2025/08/22 by eschmitz         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -152,6 +152,12 @@ int PmergeMe::binarySearch(const std::deque<int>& arr, int value, int end) {
 void PmergeMe::fordJohnsonVector(std::vector<int>& arr) {
     if (arr.size() <= 1) return;
     
+    // For very small arrays, use simple insertion sort
+    if (arr.size() <= 3) {
+        std::sort(arr.begin(), arr.end());
+        return;
+    }
+    
     // STEP 1: Create pairs and sort them (larger element first)
     std::vector<std::pair<int, int> > pairs;
     bool hasOdd = false;
@@ -173,14 +179,28 @@ void PmergeMe::fordJohnsonVector(std::vector<int>& arr) {
     }
     
     // STEP 2: Recursively sort the larger elements
-    // This creates the foundation of our main chain
-    std::vector<int> largerElements = sortPairsVector(pairs);
+    std::vector<int> largerElements;
+    for (size_t i = 0; i < pairs.size(); i++) {
+        largerElements.push_back(pairs[i].first);
+    }
+    fordJohnsonVector(largerElements);
+    
+    // Reorder pairs according to the sorted larger elements
+    std::vector<std::pair<int, int> > sortedPairs;
+    for (size_t i = 0; i < largerElements.size(); i++) {
+        for (size_t j = 0; j < pairs.size(); j++) {
+            if (pairs[j].first == largerElements[i]) {
+                sortedPairs.push_back(pairs[j]);
+                break;
+            }
+        }
+    }
+    pairs = sortedPairs;
     
     // STEP 3: Build main chain starting with smallest of first pair
     std::vector<int> mainChain;
-    std::vector<int> toInsert;
     
-    // Add the smallest element of the first pair (it's guaranteed to be the smallest overall)
+    // Add the smallest element of the first pair
     if (!pairs.empty()) {
         mainChain.push_back(pairs[0].second);
     }
@@ -190,37 +210,39 @@ void PmergeMe::fordJohnsonVector(std::vector<int>& arr) {
         mainChain.push_back(largerElements[i]);
     }
     
-    // Prepare smaller elements for insertion (skip first pair's smaller element)
+    // STEP 4: Insert remaining smaller elements using Jacobsthal sequence
+    std::vector<int> toInsert;
     for (size_t i = 1; i < pairs.size(); i++) {
         toInsert.push_back(pairs[i].second);
     }
     
-    // STEP 4: Insert elements using Jacobsthal sequence for optimal order
-    std::vector<int> jacobsthal = generateJacobsthalSequence(toInsert.size());
-    std::vector<bool> inserted(toInsert.size(), false);
-    
-    // Insert according to Jacobsthal sequence
-    for (size_t i = 0; i < jacobsthal.size(); i++) {
-        int idx = jacobsthal[i] - 1; // Convert to 0-based index
+    if (!toInsert.empty()) {
+        std::vector<int> jacobsthal = generateJacobsthalSequence(toInsert.size());
+        std::vector<bool> inserted(toInsert.size(), false);
         
-        // Insert in decreasing order from current Jacobsthal number to previous one
-        int prevJacobsthal = (i > 0) ? jacobsthal[i - 1] : 0;
-        
-        for (int j = std::min(idx, (int)toInsert.size() - 1); j >= prevJacobsthal; j--) {
-            if (j < (int)toInsert.size() && !inserted[j]) {
-                // Use binary search to find optimal insertion position
-                int pos = binarySearch(mainChain, toInsert[j], mainChain.size());
-                mainChain.insert(mainChain.begin() + pos, toInsert[j]);
-                inserted[j] = true;
+        // Insert according to Jacobsthal sequence
+        for (size_t i = 0; i < jacobsthal.size(); i++) {
+            int idx = jacobsthal[i] - 1; // Convert to 0-based index
+            
+            // Insert in decreasing order from current Jacobsthal number to previous one
+            int prevJacobsthal = (i > 0) ? jacobsthal[i - 1] : 0;
+            
+            for (int j = std::min(idx, (int)toInsert.size() - 1); j >= prevJacobsthal; j--) {
+                if (j >= 0 && j < (int)toInsert.size() && !inserted[j]) {
+                    // Use binary search to find optimal insertion position
+                    int pos = binarySearch(mainChain, toInsert[j], mainChain.size());
+                    mainChain.insert(mainChain.begin() + pos, toInsert[j]);
+                    inserted[j] = true;
+                }
             }
         }
-    }
-    
-    // Insert any remaining elements
-    for (size_t i = 0; i < toInsert.size(); i++) {
-        if (!inserted[i]) {
-            int pos = binarySearch(mainChain, toInsert[i], mainChain.size());
-            mainChain.insert(mainChain.begin() + pos, toInsert[i]);
+        
+        // Insert any remaining elements
+        for (size_t i = 0; i < toInsert.size(); i++) {
+            if (!inserted[i]) {
+                int pos = binarySearch(mainChain, toInsert[i], mainChain.size());
+                mainChain.insert(mainChain.begin() + pos, toInsert[i]);
+            }
         }
     }
     
@@ -259,6 +281,12 @@ std::vector<int> PmergeMe::sortPairsVector(const std::vector<std::pair<int, int>
 void PmergeMe::fordJohnsonDeque(std::deque<int>& arr) {
     if (arr.size() <= 1) return;
     
+    // For very small arrays, use simple insertion sort
+    if (arr.size() <= 3) {
+        std::sort(arr.begin(), arr.end());
+        return;
+    }
+    
     // STEP 1: Create pairs and sort them (larger element first)
     std::deque<std::pair<int, int> > pairs;
     bool hasOdd = false;
@@ -280,11 +308,26 @@ void PmergeMe::fordJohnsonDeque(std::deque<int>& arr) {
     }
     
     // STEP 2: Recursively sort the larger elements
-    std::deque<int> largerElements = sortPairsDeque(pairs);
+    std::deque<int> largerElements;
+    for (size_t i = 0; i < pairs.size(); i++) {
+        largerElements.push_back(pairs[i].first);
+    }
+    fordJohnsonDeque(largerElements);
+    
+    // Reorder pairs according to the sorted larger elements
+    std::deque<std::pair<int, int> > sortedPairs;
+    for (size_t i = 0; i < largerElements.size(); i++) {
+        for (size_t j = 0; j < pairs.size(); j++) {
+            if (pairs[j].first == largerElements[i]) {
+                sortedPairs.push_back(pairs[j]);
+                break;
+            }
+        }
+    }
+    pairs = sortedPairs;
     
     // STEP 3: Build main chain starting with smallest of first pair
     std::deque<int> mainChain;
-    std::deque<int> toInsert;
     
     // Add the smallest element of the first pair
     if (!pairs.empty()) {
@@ -296,34 +339,36 @@ void PmergeMe::fordJohnsonDeque(std::deque<int>& arr) {
         mainChain.push_back(largerElements[i]);
     }
     
-    // Prepare smaller elements for insertion
+    // STEP 4: Insert remaining smaller elements using Jacobsthal sequence
+    std::deque<int> toInsert;
     for (size_t i = 1; i < pairs.size(); i++) {
         toInsert.push_back(pairs[i].second);
     }
     
-    // STEP 4: Insert elements using Jacobsthal sequence
-    std::vector<int> jacobsthal = generateJacobsthalSequence(toInsert.size());
-    std::vector<bool> inserted(toInsert.size(), false);
-    
-    for (size_t i = 0; i < jacobsthal.size(); i++) {
-        int idx = jacobsthal[i] - 1;
+    if (!toInsert.empty()) {
+        std::vector<int> jacobsthal = generateJacobsthalSequence(toInsert.size());
+        std::vector<bool> inserted(toInsert.size(), false);
         
-        int prevJacobsthal = (i > 0) ? jacobsthal[i - 1] : 0;
-        
-        for (int j = std::min(idx, (int)toInsert.size() - 1); j >= prevJacobsthal; j--) {
-            if (j < (int)toInsert.size() && !inserted[j]) {
-                int pos = binarySearch(mainChain, toInsert[j], mainChain.size());
-                mainChain.insert(mainChain.begin() + pos, toInsert[j]);
-                inserted[j] = true;
+        for (size_t i = 0; i < jacobsthal.size(); i++) {
+            int idx = jacobsthal[i] - 1;
+            
+            int prevJacobsthal = (i > 0) ? jacobsthal[i - 1] : 0;
+            
+            for (int j = std::min(idx, (int)toInsert.size() - 1); j >= prevJacobsthal; j--) {
+                if (j >= 0 && j < (int)toInsert.size() && !inserted[j]) {
+                    int pos = binarySearch(mainChain, toInsert[j], mainChain.size());
+                    mainChain.insert(mainChain.begin() + pos, toInsert[j]);
+                    inserted[j] = true;
+                }
             }
         }
-    }
-    
-    // Insert any remaining elements
-    for (size_t i = 0; i < toInsert.size(); i++) {
-        if (!inserted[i]) {
-            int pos = binarySearch(mainChain, toInsert[i], mainChain.size());
-            mainChain.insert(mainChain.begin() + pos, toInsert[i]);
+        
+        // Insert any remaining elements
+        for (size_t i = 0; i < toInsert.size(); i++) {
+            if (!inserted[i]) {
+                int pos = binarySearch(mainChain, toInsert[i], mainChain.size());
+                mainChain.insert(mainChain.begin() + pos, toInsert[i]);
+            }
         }
     }
     
